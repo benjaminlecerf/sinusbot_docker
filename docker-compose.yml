@@ -1,0 +1,10 @@
+sinusbot-container:
+  image: 'docker.io/galexrt/sinusbot'
+  container_name: "sinusbot"
+  hostname: "sinusbot.example.com"
+  restart: unless-stopped
+  ports:
+    - '8087:8087'
+  volumes:
+    - './data:/sinusbot/data'
+    - './scripts:/sinusbot/scripts'
