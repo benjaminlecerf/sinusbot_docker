@@ -9,7 +9,7 @@ ENV LANG="en_US.UTF-8" \
     YTDL_VERSION="latest" \
     TS3_VERSION="3.0.19.4" \
     TS3_DL_ADDRESS="http://teamspeak.gameserver.gamed.de/ts3/releases/" \
-    SINUSBOT_DL_URL="https://www.sinusbot.com/dl/sinusbot-beta.tar.bz2"
+    SINUSBOT_DL_URL="https://www.sinusbot.com/dl/sinusbot.current.tar.bz2"
 
 ENV SINUS_DATA="$SINUS_DIR/data" \
     SINUS_DATA_SCRIPTS="$SINUS_DIR/scripts" \
