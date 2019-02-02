@@ -1,58 +1,42 @@
-FROM alpine
+#Docker unlimited Sinusbot instances
+#Version: SinusBot Beta 0.14.0-be7bbc4
+#Creator: https://www.sinusbot.com/
+#Script Made By: Ralph
+#Credits Qraktzyl
 
-ENV LANG="en_US.UTF-8" \
-    LC_ALL="en_US.UTF-8 " \
-    SINUS_USER="3000" \
-    SINUS_GROUP="3000" \
-    SINUS_DIR="/sinusbot" \
-    YTDL_BIN="/usr/local/bin/youtube-dl" \
-    YTDL_VERSION="latest" \
-    TS3_VERSION="3.0.19.4" \
-    TS3_DL_ADDRESS="http://teamspeak.gameserver.gamed.de/ts3/releases/" \
-    SINUSBOT_DL_URL="https://www.sinusbot.com/dl/sinusbot.current.tar.bz2"
+FROM ubuntu
 
-ENV SINUS_DATA="$SINUS_DIR/data" \
-    SINUS_DATA_SCRIPTS="$SINUS_DIR/scripts" \
-    TS3_DIR="$SINUS_DIR/TeamSpeak3-Client-linux_amd64"
+#VOLUME ["/SinusBot"]
 
-#RUN groupadd -g "$SINUS_GROUP" sinusbot && \
-#    useradd -u "$SINUS_USER" -g "$SINUS_GROUP" -d "$SINUS_DIR" sinusbot 
-    
-RUN apk update && \
-    apk add -q x11vnc xvfb libxcursor1 ca-certificates bzip2 \
-        libglib2.0-0 libnss3 locales wget sudo python less && \
-    locale-gen --purge "$LANG" && \
-    update-locale LANG="$LANG" && \
-    echo "LC_ALL=en_US.UTF-8" >> /etc/default/locale && \
-    echo "LANG=en_US.UTF-8" >> /etc/default/locale && \
-    update-ca-certificates && \
-    mkdir -p "$SINUS_DIR" 
-    
-RUN wget -qO- "$SINUSBOT_DL_URL" | \
-    tar -xjf- -C "$SINUS_DIR" && \
-    mv "$SINUS_DATA_SCRIPTS" "$SINUS_DATA_SCRIPTS-orig" && \
-    cp -f "$SINUS_DIR/config.ini.dist" "$SINUS_DIR/config.ini" && \
-    sed -i 's|^DataDir.*|DataDir = '"$SINUS_DATA"'|g' "$SINUS_DIR/config.ini" && \
-    mkdir -p "$TS3_DIR" && \
-    cd "$SINUS_DIR" || exit 1 && \
-    wget -q -O "TeamSpeak3-Client-linux_amd64-$TS3_VERSION.run" \
-        "$TS3_DL_ADDRESS/$TS3_VERSION/TeamSpeak3-Client-linux_amd64-$TS3_VERSION.run" && \
-    chmod 755 "TeamSpeak3-Client-linux_amd64-$TS3_VERSION.run" && \
-    yes | "./TeamSpeak3-Client-linux_amd64-$TS3_VERSION.run" && \
-    rm -f "TeamSpeak3-Client-linux_amd64-$TS3_VERSION.run" && \
-    cp -f "$SINUS_DIR/plugin/libsoundbot_plugin.so" "$TS3_DIR/plugins/" && \
-    sed -i "s|^TS3Path.*|TS3Path = \"$TS3_DIR/ts3client_linux_amd64\"|g" "$SINUS_DIR/config.ini" && \
-    wget -q -O "$YTDL_BIN" "https://yt-dl.org/downloads/$YTDL_VERSION/youtube-dl" && \
-    chmod 755 -f "$YTDL_BIN" && \
-    echo "YoutubeDLPath = \"$YTDL_BIN\"" >> "$SINUS_DIR/config.ini" && \
-    chown -fR sinusbot:sinusbot "$SINUS_DIR" && \
-    apk cache clean && \
-    rm -rf /tmp/* /var/tmp/*
+#Prerequisites
+RUN apt-get -y update && apt-get -y upgrade
+RUN apt-get install x11vnc xvfb libxcursor1 ca-certificates bzip2 libnss3 libegl1-mesa x11-xkb-utils libasound2 libglib2.0-0 curl wget python2.7 libssl-dev libffi-dev python-dev -y
+RUN update-ca-certificates
+RUN curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl && chmod a+rx /usr/local/bin/youtube-dl
+RUN mkdir /opt/ts3soundboard/
 
-COPY entrypoint.sh /entrypoint.sh
+#Downloads
+RUN cd /opt/ts3soundboard/ && wget https://www.sinusbot.com/pre/sinusbot-0.14.0-be7bbc4.tar.bz2
+RUN cd /opt/ts3soundboard/ && wget http://dl.4players.de/ts/releases/3.1.9/TeamSpeak3-Client-linux_amd64-3.1.9.run
 
-VOLUME ["$SINUS_DATA", "$SINUS_DATA_SCRIPTS"]
+#Setting Up Files
+ADD config.ini /opt/ts3soundboard/config.ini
+RUN cd /opt/ts3soundboard/ && tar -xjvf sinusbot-0.14.0-be7bbc4.tar.bz2
+RUN cd /opt/ts3soundboard/ && chmod 0755 TeamSpeak3-Client-linux_amd64-3.1.9.run
+RUN sed -i 's/^MS_PrintLicense$//' /opt/ts3soundboard/TeamSpeak3-Client-linux_amd64-3.1.9.run
+RUN cd /opt/ts3soundboard && ./TeamSpeak3-Client-linux_amd64-3.1.9.run
+RUN cd /opt/ts3soundboard/ && rm TeamSpeak3-Client-linux_amd64/xcbglintegrations/libqxcb-glx-integration.so
+RUN mkdir /opt/ts3soundboard/TeamSpeak3-Client-linux_amd64/plugins
+RUN cd /opt/ts3soundboard/ && cp plugin/libsoundbot_plugin.so TeamSpeak3-Client-linux_amd64/plugins/
+
+#Adding Sinusbot User
+RUN useradd -ms /bin/bash sinusbot
+RUN chown -R sinusbot:sinusbot /opt/ts3soundboard
+RUN su sinusbot
+
+# Add a startup script
+ADD run.sh /run.sh
+RUN chmod 755 /*.sh
 
 EXPOSE 8087
-
-ENTRYPOINT ["/entrypoint.sh"
+CMD ["/run.sh"]
